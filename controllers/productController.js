@@ -1,4 +1,5 @@
 const Product = require("../models/productModel");
+const { getPostData } = require("../utils");
 
 async function getProducts(req, res) {
 	try {
@@ -27,27 +28,47 @@ async function getProduct(req, res, id) {
 
 async function createProduct(req, res) {
 	try {
-		let body = "";
-		req.on("data", chunk => {
-			body += chunk.toString();
-		});
+		const body = await getPostData(req);
+		const { title, description, price, category, image } = JSON.parse(body);
+		const product = {
+			title,
+			description,
+			price,
+			category,
+			image,
+		};
 
-		req.on("end", async () => {
-			const { title, description, price } = JSON.parse(body);
+		const newProduct = await Product.create(product);
 
-			const product = {
-				title,
-				description,
-				price,
-				category,
-				image,
+		res.writeHead(201, { "Content-Type": "application/json" });
+		return res.end(JSON.stringify(newProduct));
+	} catch (error) {
+		console.log(error);
+	}
+}
+
+async function updateProduct(req, res, id) {
+	try {
+		const product = await Product.findById(id);
+		if (!product) {
+			res.writeHead(404, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ message: "Product Not Found" }));
+		} else {
+			const body = await getPostData(req);
+			const { title, description, price, category, image } = JSON.parse(body);
+			const productData = {
+				title: title || product.title,
+				description: description || product.description,
+				price: price || product.price,
+				category: category || product.category,
+				image: image || product.image,
 			};
 
-			const newProduct = await Product.create(product);
+			const updProduct = await Product.update(id, productData);
 
-			res.writeHead(201, { "Content-Type": "application/json" });
-			return res.end(JSON.stringify(newProduct));
-		});
+			res.writeHead(200, { "Content-Type": "application/json" });
+			return res.end(JSON.stringify(updProduct));
+		}
 	} catch (error) {
 		console.log(error);
 	}
@@ -57,4 +78,5 @@ module.exports = {
 	getProducts,
 	getProduct,
 	createProduct,
+	updateProduct,
 };
